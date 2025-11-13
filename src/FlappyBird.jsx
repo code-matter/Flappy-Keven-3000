@@ -15,7 +15,7 @@ const GROUND_HEIGHT = 50;
 const GRAVITY = 0.5;
 const JUMP_STRENGTH = -8;
 const PIPE_WIDTH = 60;
-const PIPE_GAP = 150;
+const PIPE_GAP = 180;
 const PIPE_SPEED = 3;
 
 function FlappyBird() {
