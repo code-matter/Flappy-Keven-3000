@@ -164,6 +164,9 @@ function FlappyBird() {
   // Generate pipes
   useEffect(() => {
     if (gameStarted && !gameOver) {
+      // Adjust pipe spawn interval based on slow motion
+      const spawnInterval = activePowerUp === "SLOW_MOTION" ? 3000 : 2000;
+
       pipeTimerRef.current = setInterval(() => {
         // Ensure bottom pipe never goes below the ground
         const maxGapTop = GAME_HEIGHT - GROUND_HEIGHT - PIPE_GAP;
@@ -177,10 +180,10 @@ function FlappyBird() {
             passed: false,
           },
         ]);
-      }, 2000);
+      }, spawnInterval);
     }
     return () => clearInterval(pipeTimerRef.current);
-  }, [gameStarted, gameOver]);
+  }, [gameStarted, gameOver, activePowerUp]);
 
   // Generate coins (power-ups)
   useEffect(() => {
