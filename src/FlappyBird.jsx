@@ -49,7 +49,7 @@ function FlappyBird() {
   const [birdVelocity, setBirdVelocity] = useState(0);
   const [gameStarted, setGameStarted] = useState(false);
   const [gameOver, setGameOver] = useState(false);
-  const [score, setScore] = useState(65);
+  const [score, setScore] = useState(0);
   const [bestScore, setBestScore] = useState(0);
   const [pipes, setPipes] = useState([]);
   const [coins, setCoins] = useState([]);
