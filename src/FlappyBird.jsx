@@ -33,7 +33,7 @@ function FlappyBird() {
 
   // Load best score from localStorage on mount
   useEffect(() => {
-    const savedBestScore = localStorage.getItem('flappyBirdBestScore');
+    const savedBestScore = localStorage.getItem("flappyBirdBestScore");
     if (savedBestScore) {
       setBestScore(parseInt(savedBestScore, 10));
     }
@@ -43,7 +43,7 @@ function FlappyBird() {
   useEffect(() => {
     if (gameOver && score > bestScore) {
       setBestScore(score);
-      localStorage.setItem('flappyBirdBestScore', score.toString());
+      localStorage.setItem("flappyBirdBestScore", score.toString());
     }
   }, [gameOver, score, bestScore]);
 
@@ -228,11 +228,17 @@ function FlappyBird() {
         {/* Start Screen */}
         {showStartScreen && (
           <div className="start-screen">
-            <img src={getReadyImage} alt="Get Ready" className="get-ready-image" />
+            <img
+              src={getReadyImage}
+              alt="Get Ready"
+              className="get-ready-image"
+            />
             <div className="instructions">
-              <p>Click or press SPACE to flap</p>
-              <p>Avoid the pipes!</p>
-              {bestScore > 0 && <p className="best-score-text">Best Score: {bestScore}</p>}
+              <p>Cliquez ou appuyez sur ESPACE pour faire voler Keven</p>
+              <p>Évitez les pipes !</p>
+              {bestScore > 0 && (
+                <p className="best-score-text">Meilleur score: {bestScore}</p>
+              )}
             </div>
             <img
               src={playButtonImage}
@@ -246,10 +252,18 @@ function FlappyBird() {
         {/* Game Over Message */}
         {gameOver && (
           <div className="game-over-screen">
-            <img src={gameOverImage} alt="Game Over" className="game-over-image" />
+            <img
+              src={gameOverImage}
+              alt="Game Over"
+              className="game-over-image"
+            />
             <div className="game-over-score">Score: {score}</div>
-            <div className="game-over-best-score">Best: {bestScore}</div>
-            <div className="game-over-restart">Click or press SPACE to restart</div>
+            <div className="game-over-best-score">
+              Meilleur score: {bestScore}
+            </div>
+            <div className="game-over-restart">
+              Cliquez ou appuyez sur ESPACE pour recommencer
+            </div>
           </div>
         )}
       </div>
