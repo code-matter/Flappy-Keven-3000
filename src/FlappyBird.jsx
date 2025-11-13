@@ -9,6 +9,9 @@ import getReadyImage from "./assets/Get_Ready.png";
 import playButtonImage from "./assets/Play.jpg";
 import titleImage from "./assets/Flappy_Kev_Title.png";
 import coinImage from "./assets/White_Coin.png";
+import bronzeCoinImage from "./assets/Bronze_Coin.png";
+import silverCoinImage from "./assets/Silver_Coin.png";
+import goldCoinImage from "./assets/Gold_Coin.png";
 
 const BIRD_SIZE = 50;
 const GAME_WIDTH = 400;
@@ -28,6 +31,12 @@ const POWER_UPS = {
   DOUBLE_POINTS: { name: "Points x2", color: "#FF69B4" },
 };
 
+const SCORE_COINS = {
+  BRONZE: { value: 1, image: bronzeCoinImage, color: "#CD7F32" },
+  SILVER: { value: 2, image: silverCoinImage, color: "#C0C0C0" },
+  GOLD: { value: 3, image: goldCoinImage, color: "#FFD700" },
+};
+
 function FlappyBird() {
   const [showStartScreen, setShowStartScreen] = useState(true);
   const [birdPosition, setBirdPosition] = useState(300);
@@ -38,12 +47,14 @@ function FlappyBird() {
   const [bestScore, setBestScore] = useState(0);
   const [pipes, setPipes] = useState([]);
   const [coins, setCoins] = useState([]);
+  const [scoreCoins, setScoreCoins] = useState([]);
   const [activePowerUp, setActivePowerUp] = useState(null);
   const [powerUpTimeLeft, setPowerUpTimeLeft] = useState(0);
 
   const gameLoopRef = useRef();
   const pipeTimerRef = useRef();
   const coinTimerRef = useRef();
+  const scoreCoinTimerRef = useRef();
   const powerUpTimerRef = useRef();
 
   // Load best score from localStorage on mount
@@ -89,6 +100,7 @@ function FlappyBird() {
       setScore(0);
       setPipes([]);
       setCoins([]);
+      setScoreCoins([]);
       setActivePowerUp(null);
       setPowerUpTimeLeft(0);
       setShowStartScreen(true);
@@ -149,6 +161,36 @@ function FlappyBird() {
     return () => clearTimeout(coinTimerRef.current);
   }, [gameStarted, gameOver, activePowerUp]);
 
+  // Generate score coins (Bronze, Silver, Gold)
+  useEffect(() => {
+    if (gameStarted && !gameOver) {
+      const spawnScoreCoin = () => {
+        // Random interval between 3-6 seconds
+        const nextSpawnTime = Math.random() * 3000 + 3000;
+        scoreCoinTimerRef.current = setTimeout(() => {
+          const coinY =
+            Math.random() * (GAME_HEIGHT - GROUND_HEIGHT - 100) + 50;
+
+          // Random coin type with weighted probability
+          const rand = Math.random();
+          let coinType;
+          if (rand < 0.6) {
+            coinType = "BRONZE"; // 60% chance
+          } else if (rand < 0.9) {
+            coinType = "SILVER"; // 30% chance
+          } else {
+            coinType = "GOLD"; // 10% chance
+          }
+
+          setScoreCoins((prev) => [...prev, { x: GAME_WIDTH, y: coinY, type: coinType }]);
+          spawnScoreCoin();
+        }, nextSpawnTime);
+      };
+      spawnScoreCoin();
+    }
+    return () => clearTimeout(scoreCoinTimerRef.current);
+  }, [gameStarted, gameOver]);
+
   // Power-up timer countdown
   useEffect(() => {
     if (activePowerUp && powerUpTimeLeft > 0) {
@@ -179,10 +221,11 @@ function FlappyBird() {
         setBirdPosition((pos) => {
           const newPos = pos + birdVelocity;
 
-          // Check floor/ceiling collision
+          // Check floor/ceiling collision with tighter hitbox
+          const collisionMargin = 8;
           if (
-            newPos < 0 ||
-            newPos > GAME_HEIGHT - GROUND_HEIGHT - currentBirdSize
+            newPos < -collisionMargin ||
+            newPos > GAME_HEIGHT - GROUND_HEIGHT - currentBirdSize + collisionMargin
           ) {
             setGameOver(true);
             setGameStarted(false);
@@ -232,6 +275,42 @@ function FlappyBird() {
           });
         });
 
+        // Update score coins
+        setScoreCoins((prevScoreCoins) => {
+          const newScoreCoins = prevScoreCoins
+            .map((coin) => ({ ...coin, x: coin.x - currentSpeed }))
+            .filter((coin) => coin.x > -COIN_SIZE);
+
+          // Check collision with score coins
+          const birdLeft = 50;
+          const birdRight = 50 + currentBirdSize;
+          const birdTop = birdPosition;
+          const birdBottom = birdPosition + currentBirdSize;
+
+          return newScoreCoins.filter((coin) => {
+            const coinLeft = coin.x;
+            const coinRight = coin.x + COIN_SIZE;
+            const coinTop = coin.y;
+            const coinBottom = coin.y + COIN_SIZE;
+
+            // Check if bird collides with coin
+            if (
+              birdRight > coinLeft &&
+              birdLeft < coinRight &&
+              birdBottom > coinTop &&
+              birdTop < coinBottom
+            ) {
+              // Add score based on coin type
+              const coinValue = SCORE_COINS[coin.type].value;
+              const pointsToAdd = activePowerUp === "DOUBLE_POINTS" ? coinValue * 2 : coinValue;
+              setScore((s) => s + pointsToAdd);
+
+              return false; // Remove coin
+            }
+            return true; // Keep coin
+          });
+        });
+
         // Update pipes
         setPipes((prevPipes) => {
           const newPipes = prevPipes
@@ -240,10 +319,12 @@ function FlappyBird() {
 
           // Check collision with pipes
           newPipes.forEach((pipe) => {
-            const birdLeft = 50;
-            const birdRight = 50 + currentBirdSize;
-            const birdTop = birdPosition;
-            const birdBottom = birdPosition + currentBirdSize;
+            // Add collision margin to make hitbox tighter (more forgiving)
+            const collisionMargin = 8;
+            const birdLeft = 50 + collisionMargin;
+            const birdRight = 50 + currentBirdSize - collisionMargin;
+            const birdTop = birdPosition + collisionMargin;
+            const birdBottom = birdPosition + currentBirdSize - collisionMargin;
 
             const pipeLeft = pipe.x;
             const pipeRight = pipe.x + PIPE_WIDTH;
@@ -338,12 +419,26 @@ function FlappyBird() {
           </div>
         ))}
 
-        {/* Coins */}
+        {/* Coins (Power-ups) */}
         {coins.map((coin, index) => (
           <img
             key={index}
             src={coinImage}
             alt="power-up coin"
+            className="coin white-coin"
+            style={{
+              left: coin.x,
+              top: coin.y,
+            }}
+          />
+        ))}
+
+        {/* Score Coins */}
+        {scoreCoins.map((coin, index) => (
+          <img
+            key={index}
+            src={SCORE_COINS[coin.type].image}
+            alt={`${coin.type.toLowerCase()} coin`}
             className="coin"
             style={{
               left: coin.x,
@@ -416,6 +511,23 @@ function FlappyBird() {
                     {POWER_UPS.DOUBLE_POINTS.name}
                   </span>
                   : Keven double les points!
+                </div>
+              </div>
+              <div className="coins-section">
+                <div className="coins-title">Pièces</div>
+                <div className="coins-list">
+                  <div className="coin-item">
+                    <img src={bronzeCoinImage} alt="bronze" className="coin-mini" />
+                    <span style={{ color: SCORE_COINS.BRONZE.color }}>+1</span>
+                  </div>
+                  <div className="coin-item">
+                    <img src={silverCoinImage} alt="silver" className="coin-mini" />
+                    <span style={{ color: SCORE_COINS.SILVER.color }}>+2</span>
+                  </div>
+                  <div className="coin-item">
+                    <img src={goldCoinImage} alt="gold" className="coin-mini" />
+                    <span style={{ color: SCORE_COINS.GOLD.color }}>+3</span>
+                  </div>
                 </div>
               </div>
             </div>
