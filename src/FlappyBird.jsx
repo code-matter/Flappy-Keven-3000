@@ -4,6 +4,9 @@ import topPipeImage from "./assets/Top_Pipe.png";
 import bottomPipeImage from "./assets/Bottom_Pipe.png";
 import backgroundImage from "./assets/Background.jpg";
 import groundImage from "./assets/Ground.png";
+import gameOverImage from "./assets/Game_Over.png";
+import getReadyImage from "./assets/Get_Ready.png";
+import playButtonImage from "./assets/Play.jpg";
 
 const BIRD_SIZE = 50;
 const GAME_WIDTH = 400;
@@ -16,18 +19,49 @@ const PIPE_GAP = 150;
 const PIPE_SPEED = 3;
 
 function FlappyBird() {
+  const [showStartScreen, setShowStartScreen] = useState(true);
   const [birdPosition, setBirdPosition] = useState(250);
   const [birdVelocity, setBirdVelocity] = useState(0);
   const [gameStarted, setGameStarted] = useState(false);
   const [gameOver, setGameOver] = useState(false);
   const [score, setScore] = useState(0);
+  const [bestScore, setBestScore] = useState(0);
   const [pipes, setPipes] = useState([]);
 
   const gameLoopRef = useRef();
   const pipeTimerRef = useRef();
 
+  // Load best score from localStorage on mount
+  useEffect(() => {
+    const savedBestScore = localStorage.getItem('flappyBirdBestScore');
+    if (savedBestScore) {
+      setBestScore(parseInt(savedBestScore, 10));
+    }
+  }, []);
+
+  // Update best score when game ends
+  useEffect(() => {
+    if (gameOver && score > bestScore) {
+      setBestScore(score);
+      localStorage.setItem('flappyBirdBestScore', score.toString());
+    }
+  }, [gameOver, score, bestScore]);
+
+  // Handle play button click
+  const handlePlayClick = (e) => {
+    e.stopPropagation();
+    setShowStartScreen(false);
+    setGameStarted(true);
+  };
+
   // Handle jump
   const jump = () => {
+    if (showStartScreen) {
+      // Start the game when on start screen
+      setShowStartScreen(false);
+      setGameStarted(true);
+      return;
+    }
     if (!gameStarted) {
       setGameStarted(true);
       return;
@@ -39,7 +73,8 @@ function FlappyBird() {
       setGameOver(false);
       setScore(0);
       setPipes([]);
-      setGameStarted(true);
+      setShowStartScreen(true);
+      setGameStarted(false);
       return;
     }
     setBirdVelocity(JUMP_STRENGTH);
@@ -55,7 +90,7 @@ function FlappyBird() {
     };
     window.addEventListener("keydown", handleKeyPress);
     return () => window.removeEventListener("keydown", handleKeyPress);
-  }, [gameStarted, gameOver]);
+  }, [gameStarted, gameOver, showStartScreen]);
 
   // Generate pipes
   useEffect(() => {
@@ -188,19 +223,33 @@ function FlappyBird() {
         ))}
 
         {/* Score */}
-        <div className="score">{score}</div>
+        {!showStartScreen && <div className="score">{score}</div>}
 
-        {/* Start/Game Over Message */}
-        {!gameStarted && !gameOver && (
-          <div className="message">Click or press SPACE to start</div>
+        {/* Start Screen */}
+        {showStartScreen && (
+          <div className="start-screen">
+            <img src={getReadyImage} alt="Get Ready" className="get-ready-image" />
+            <div className="instructions">
+              <p>Click or press SPACE to flap</p>
+              <p>Avoid the pipes!</p>
+              {bestScore > 0 && <p className="best-score-text">Best Score: {bestScore}</p>}
+            </div>
+            <img
+              src={playButtonImage}
+              alt="Play"
+              className="play-button"
+              onClick={handlePlayClick}
+            />
+          </div>
         )}
+
+        {/* Game Over Message */}
         {gameOver && (
-          <div className="message">
-            Game Over!
-            <br />
-            Score: {score}
-            <br />
-            Click or press SPACE to restart
+          <div className="game-over-screen">
+            <img src={gameOverImage} alt="Game Over" className="game-over-image" />
+            <div className="game-over-score">Score: {score}</div>
+            <div className="game-over-best-score">Best: {bestScore}</div>
+            <div className="game-over-restart">Click or press SPACE to restart</div>
           </div>
         )}
       </div>

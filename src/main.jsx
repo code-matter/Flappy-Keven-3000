@@ -1,10 +1,10 @@
-import React from 'react'
-import ReactDOM from 'react-dom/client'
-import FlappyBird from './FlappyBird'
-import './App.css'
+import React from "react";
+import ReactDOM from "react-dom/client";
+import "./App.css";
+import FlappyBird from "./FlappyBird";
 
-ReactDOM.createRoot(document.getElementById('root')).render(
+ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <FlappyBird />
-  </React.StrictMode>,
-)
+  </React.StrictMode>
+);
