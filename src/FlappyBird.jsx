@@ -12,6 +12,12 @@ import coinImage from "./assets/White_Coin.png";
 import bronzeCoinImage from "./assets/Bronze_Coin.png";
 import silverCoinImage from "./assets/Silver_Coin.png";
 import goldCoinImage from "./assets/Gold_Coin.png";
+import gameStartSound from "./assets/Game_Start.mp3";
+import gameOverSound from "./assets/Game_Over.mp3";
+import bonusSound from "./assets/Bonus.mp3";
+import pipeSound from "./assets/Pipe_Sound.mp3";
+import noiceSound from "./assets/Noice.mp3";
+import noiceImage from "./assets/Noice.jpg";
 
 const BIRD_SIZE = 50;
 const GAME_WIDTH = 400;
@@ -43,19 +49,36 @@ function FlappyBird() {
   const [birdVelocity, setBirdVelocity] = useState(0);
   const [gameStarted, setGameStarted] = useState(false);
   const [gameOver, setGameOver] = useState(false);
-  const [score, setScore] = useState(0);
+  const [score, setScore] = useState(65);
   const [bestScore, setBestScore] = useState(0);
   const [pipes, setPipes] = useState([]);
   const [coins, setCoins] = useState([]);
   const [scoreCoins, setScoreCoins] = useState([]);
   const [activePowerUp, setActivePowerUp] = useState(null);
   const [powerUpTimeLeft, setPowerUpTimeLeft] = useState(0);
+  const [showNice, setShowNice] = useState(false);
+  const niceShownRef = useRef(false);
 
   const gameLoopRef = useRef();
   const pipeTimerRef = useRef();
   const coinTimerRef = useRef();
   const scoreCoinTimerRef = useRef();
   const powerUpTimerRef = useRef();
+  const gameStartAudioRef = useRef();
+  const gameOverAudioRef = useRef();
+  const bonusAudioRef = useRef();
+  const pipeAudioRef = useRef();
+  const noiceAudioRef = useRef();
+
+  // Initialize audio
+  useEffect(() => {
+    gameStartAudioRef.current = new Audio(gameStartSound);
+    gameOverAudioRef.current = new Audio(gameOverSound);
+    bonusAudioRef.current = new Audio(bonusSound);
+    pipeAudioRef.current = new Audio(pipeSound);
+    pipeAudioRef.current.volume = 0.1; // Lower volume for pipe sound
+    noiceAudioRef.current = new Audio(noiceSound);
+  }, []);
 
   // Load best score from localStorage on mount
   useEffect(() => {
@@ -76,6 +99,13 @@ function FlappyBird() {
   // Handle play button click
   const handlePlayClick = (e) => {
     e.stopPropagation();
+    // Play game start sound immediately
+    if (gameStartAudioRef.current) {
+      gameStartAudioRef.current.currentTime = 0.5;
+      gameStartAudioRef.current.play().catch((error) => {
+        console.log("Audio play failed:", error);
+      });
+    }
     setShowStartScreen(false);
     setGameStarted(true);
   };
@@ -83,6 +113,13 @@ function FlappyBird() {
   // Handle jump
   const jump = () => {
     if (showStartScreen) {
+      // Play game start sound immediately
+      if (gameStartAudioRef.current) {
+        gameStartAudioRef.current.currentTime = 0.5;
+        gameStartAudioRef.current.play().catch((error) => {
+          console.log("Audio play failed:", error);
+        });
+      }
       // Start the game when on start screen
       setShowStartScreen(false);
       setGameStarted(true);
@@ -103,6 +140,8 @@ function FlappyBird() {
       setScoreCoins([]);
       setActivePowerUp(null);
       setPowerUpTimeLeft(0);
+      setShowNice(false);
+      niceShownRef.current = false;
       setShowStartScreen(true);
       setGameStarted(false);
       return;
@@ -182,7 +221,10 @@ function FlappyBird() {
             coinType = "GOLD"; // 10% chance
           }
 
-          setScoreCoins((prev) => [...prev, { x: GAME_WIDTH, y: coinY, type: coinType }]);
+          setScoreCoins((prev) => [
+            ...prev,
+            { x: GAME_WIDTH, y: coinY, type: coinType },
+          ]);
           spawnScoreCoin();
         }, nextSpawnTime);
       };
@@ -207,6 +249,24 @@ function FlappyBird() {
     return () => clearInterval(powerUpTimerRef.current);
   }, [activePowerUp, powerUpTimeLeft]);
 
+  // Check for score of 69
+  useEffect(() => {
+    if (score === 69 && !niceShownRef.current) {
+      setShowNice(true);
+      niceShownRef.current = true;
+      // Play noice sound
+      if (noiceAudioRef.current) {
+        noiceAudioRef.current.currentTime = 0;
+        noiceAudioRef.current.play().catch((error) => {
+          console.log("Audio play failed:", error);
+        });
+      }
+      setTimeout(() => {
+        setShowNice(false);
+      }, 1000);
+    }
+  }, [score]);
+
   // Game loop
   useEffect(() => {
     if (gameStarted && !gameOver) {
@@ -225,10 +285,17 @@ function FlappyBird() {
           const collisionMargin = 8;
           if (
             newPos < -collisionMargin ||
-            newPos > GAME_HEIGHT - GROUND_HEIGHT - currentBirdSize + collisionMargin
+            newPos >
+              GAME_HEIGHT - GROUND_HEIGHT - currentBirdSize + collisionMargin
           ) {
             setGameOver(true);
             setGameStarted(false);
+            // Play game over sound
+            if (gameOverAudioRef.current) {
+              gameOverAudioRef.current.play().catch((error) => {
+                console.log("Audio play failed:", error);
+              });
+            }
             return pos;
           }
 
@@ -269,6 +336,13 @@ function FlappyBird() {
               setActivePowerUp(randomPowerUp);
               setPowerUpTimeLeft(duration);
 
+              // Play bonus sound
+              if (bonusAudioRef.current) {
+                bonusAudioRef.current.play().catch((error) => {
+                  console.log("Audio play failed:", error);
+                });
+              }
+
               return false; // Remove coin
             }
             return true; // Keep coin
@@ -302,8 +376,16 @@ function FlappyBird() {
             ) {
               // Add score based on coin type
               const coinValue = SCORE_COINS[coin.type].value;
-              const pointsToAdd = activePowerUp === "DOUBLE_POINTS" ? coinValue * 2 : coinValue;
+              const pointsToAdd =
+                activePowerUp === "DOUBLE_POINTS" ? coinValue * 2 : coinValue;
               setScore((s) => s + pointsToAdd);
+
+              // Play bonus sound
+              if (bonusAudioRef.current) {
+                bonusAudioRef.current.play().catch((error) => {
+                  console.log("Audio play failed:", error);
+                });
+              }
 
               return false; // Remove coin
             }
@@ -342,6 +424,12 @@ function FlappyBird() {
                 } else {
                   setGameOver(true);
                   setGameStarted(false);
+                  // Play game over sound
+                  if (gameOverAudioRef.current) {
+                    gameOverAudioRef.current.play().catch((error) => {
+                      console.log("Audio play failed:", error);
+                    });
+                  }
                 }
               }
             }
@@ -351,6 +439,14 @@ function FlappyBird() {
               pipe.passed = true;
               const points = activePowerUp === "DOUBLE_POINTS" ? 2 : 1;
               setScore((s) => s + points);
+
+              // Play pipe sound
+              if (pipeAudioRef.current) {
+                pipeAudioRef.current.currentTime = 0;
+                pipeAudioRef.current.play().catch((error) => {
+                  console.log("Audio play failed:", error);
+                });
+              }
             }
           });
 
@@ -450,6 +546,11 @@ function FlappyBird() {
         {/* Score */}
         {!showStartScreen && <div className="score">{score}</div>}
 
+        {/* NOICE! Message */}
+        {showNice && (
+          <img src={noiceImage} alt="NOICE" className="nice-message" />
+        )}
+
         {/* Power-up Info */}
         {activePowerUp && (
           <div
@@ -517,11 +618,19 @@ function FlappyBird() {
                 <div className="coins-title">Pièces</div>
                 <div className="coins-list">
                   <div className="coin-item">
-                    <img src={bronzeCoinImage} alt="bronze" className="coin-mini" />
+                    <img
+                      src={bronzeCoinImage}
+                      alt="bronze"
+                      className="coin-mini"
+                    />
                     <span style={{ color: SCORE_COINS.BRONZE.color }}>+1</span>
                   </div>
                   <div className="coin-item">
-                    <img src={silverCoinImage} alt="silver" className="coin-mini" />
+                    <img
+                      src={silverCoinImage}
+                      alt="silver"
+                      className="coin-mini"
+                    />
                     <span style={{ color: SCORE_COINS.SILVER.color }}>+2</span>
                   </div>
                   <div className="coin-item">
